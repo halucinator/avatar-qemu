@@ -165,6 +165,11 @@ static void halucinator_irq_set_irq_setter(Object *obj, Visitor *v,
         return;
     }
 
+    // also send NVIC interrupt
+    ARMCPU *armcpu = ARM_CPU(qemu_get_cpu(0));
+    CPUARMState *env = &armcpu->env;
+    armv7m_nvic_set_pending(env->nvic, irq_num, false);
+
     irq_handler(s, irq_num, 1);
 
 }
@@ -201,6 +206,7 @@ static void halucinator_irq_enable_irq_setter(Object *obj, Visitor *v,
 
     printf("QEMU: Enabling IRQ %li", irq_num);
     s->irq_regs[irq_num] |= IRQ_N_ENABLED;
+    s->status_reg |= GLOBAL_IRQ_ENABLED;
     update_irq(s);
 
 }
