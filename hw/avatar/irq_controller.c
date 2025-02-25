@@ -165,10 +165,12 @@ static void halucinator_irq_set_irq_setter(Object *obj, Visitor *v,
         return;
     }
 
+#if defined(TARGET_ARM) || defined(TARGET_AARCH64)
     // also send NVIC interrupt
     ARMCPU *armcpu = ARM_CPU(qemu_get_cpu(0));
     CPUARMState *env = &armcpu->env;
     armv7m_nvic_set_pending(env->nvic, irq_num, false);
+#endif
 
     irq_handler(s, irq_num, 1);
 
