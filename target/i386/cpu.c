@@ -5839,28 +5839,33 @@ static void x86_cpu_reset(DeviceState *dev)
     unsigned int cs_selector = 0xf000;
     target_ulong cs_base = 0xffff0000;
 
+    target_ulong cm_limit = 0xffff;
     if (x86_configurable_machine_mode != 0) {
-      // For x86 configurable machine, we don't want to start in real mode
+      // For x86 configurable machine, we don't want to start in real mode;
+      // run flat with 4 GiB segment limits ("unicorn-style") so firmware can
+      // execute anywhere and reach high MMIO (e.g. the LAPIC at 0xFEE00000)
+      // without installing its own GDT.
       cs_selector = 0;
       cs_base = 0;
+      cm_limit = 0xffffffff;
     }
 
-    cpu_x86_load_seg_cache(env, R_CS, cs_selector, cs_base, 0xffff,
+    cpu_x86_load_seg_cache(env, R_CS, cs_selector, cs_base, cm_limit,
                            DESC_P_MASK | DESC_S_MASK | DESC_CS_MASK |
                            DESC_R_MASK | DESC_A_MASK);
-    cpu_x86_load_seg_cache(env, R_DS, 0, 0, 0xffff,
+    cpu_x86_load_seg_cache(env, R_DS, 0, 0, cm_limit,
                            DESC_P_MASK | DESC_S_MASK | DESC_W_MASK |
                            DESC_A_MASK);
-    cpu_x86_load_seg_cache(env, R_ES, 0, 0, 0xffff,
+    cpu_x86_load_seg_cache(env, R_ES, 0, 0, cm_limit,
                            DESC_P_MASK | DESC_S_MASK | DESC_W_MASK |
                            DESC_A_MASK);
-    cpu_x86_load_seg_cache(env, R_SS, 0, 0, 0xffff,
+    cpu_x86_load_seg_cache(env, R_SS, 0, 0, cm_limit,
                            DESC_P_MASK | DESC_S_MASK | DESC_W_MASK |
                            DESC_A_MASK);
-    cpu_x86_load_seg_cache(env, R_FS, 0, 0, 0xffff,
+    cpu_x86_load_seg_cache(env, R_FS, 0, 0, cm_limit,
                            DESC_P_MASK | DESC_S_MASK | DESC_W_MASK |
                            DESC_A_MASK);
-    cpu_x86_load_seg_cache(env, R_GS, 0, 0, 0xffff,
+    cpu_x86_load_seg_cache(env, R_GS, 0, 0, cm_limit,
                            DESC_P_MASK | DESC_S_MASK | DESC_W_MASK |
                            DESC_A_MASK);
 
@@ -5869,6 +5874,14 @@ static void x86_cpu_reset(DeviceState *dev)
       // setting up initial state. These registers
       // values should all be 0 or undefined at the start
       // of a unicorn-style execution
+
+      // Enter 32-bit protected mode (flat, no paging). The firmware relies
+      // on protected-mode semantics: a GDT far jump (ljmp $0x08) and
+      // IDT-based interrupt delivery. With CR0.PE=0 the far jump is treated
+      // as a real-mode segment load (CS base = sel<<4) and execution
+      // derails, and injected vectors dispatch through the real-mode IVT
+      // instead of the firmware's IDT.
+      cpu_x86_update_cr0(env, env->cr[0] | CR0_PE_MASK);
 
       // But do set hflags so we're in 32-bit mode (else we end up in 16-bit)
       env->hflags |= HF_CS32_MASK | HF_SS32_MASK;

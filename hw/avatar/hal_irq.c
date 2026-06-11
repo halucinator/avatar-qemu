@@ -75,6 +75,10 @@
 #include "hw/ppc/ppc.h"
 #endif
 
+#if defined(TARGET_I386)
+#include "hw/i386/apic.h"
+#endif
+
 /* ---- hal-shadow-irq: arch-agnostic shadow-write ---- */
 void qmp_hal_shadow_irq(int64_t number_addr, int64_t fired_addr,
                         int64_t irq_num, Error **errp)
@@ -186,5 +190,26 @@ void qmp_hal_ppc_inject_irq(int64_t num_cpu, int64_t num_irq, Error **errp)
     qemu_bh_schedule(ctx->bh);
 #else
     error_setg(errp, "hal-ppc-inject-irq: not a PowerPC target");
+#endif
+}
+
+/* ---- hal-x86-inject-irq: deliver a fixed vector via the local APIC ---- */
+void qmp_hal_x86_inject_irq(int64_t num_cpu, int64_t num_irq, Error **errp)
+{
+#if defined(TARGET_I386)
+    qemu_log_mask(LOG_AVATAR, "hal-x86-inject-irq: vector %" PRId64 " cpu %"
+                  PRId64 "\n", num_irq, num_cpu);
+    if (num_irq < 0 || num_irq > 255) {
+        error_setg(errp, "hal-x86-inject-irq: vector must be 0..255");
+        return;
+    }
+    /* Deliver num_irq as a fixed-mode interrupt vector to the local APIC
+     * of CPU num_cpu (physical destination, edge-triggered). The firmware
+     * must have enabled its LAPIC and installed an IDT entry for the
+     * vector. APIC_DM_FIXED == 0 (apic_internal.h). */
+    apic_deliver_irq((uint8_t)num_cpu, 0 /* phys dest */, 0 /* APIC_DM_FIXED */,
+                     (uint8_t)num_irq, 0 /* edge */);
+#else
+    error_setg(errp, "hal-x86-inject-irq: not an x86 target");
 #endif
 }

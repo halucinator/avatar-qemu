@@ -599,6 +599,19 @@ static THISCPU *create_cpu(MachineState * ms, QDict *conf)
 #endif  /* ! TARGET_AARCH64 */
 
 #elif defined(TARGET_I386)
+    /* Select flat 32/64-bit mode BEFORE the CPU is realized. The X86CPU
+     * reset (triggered by qdev_realize below) reads
+     * x86_configurable_machine_mode to install flat segments; setting it
+     * only afterwards left the CPU in its real-mode reset state
+     * (CS base 0xffff0000), so execution at the configured entry address
+     * fetched from the wrong linear address and never ran the firmware. */
+    set_x86_configurable_machine(
+#if defined(TARGET_X86_64)
+        64
+#else
+        32
+#endif
+    );
     cpu_oc = cpu_class_by_name(TYPE_X86_CPU, cpu_type);
     if (!cpu_oc) {
         error_printf("Unable to find CPU definition\n");

@@ -195,3 +195,17 @@
 ##
 { 'command': 'hal-ppc-inject-irq',
   'data': {'num-cpu': 'int', 'num-irq': 'int' } }
+
+##
+# @hal-x86-inject-irq:
+#
+# Deliver a fixed interrupt vector to the local APIC of an x86/i386 CPU.
+# The firmware must have enabled its LAPIC and installed an IDT entry for
+# the vector.
+#
+# @num-cpu: CPU number (APIC id)
+#
+# @num-irq: interrupt vector (0..255), delivered via APIC_DM_FIXED
+##
+{ 'command': 'hal-x86-inject-irq',
+  'data': {'num-cpu': 'int', 'num-irq': 'int' } }

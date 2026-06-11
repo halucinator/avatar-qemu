@@ -20,6 +20,8 @@
 #  include "target/mips/cpu.h"
 #elif defined(TARGET_PPC)
 #  include "target/ppc/cpu.h"
+#elif defined(TARGET_I386)
+#  include "target/i386/cpu.h"
 #else
 #  error "avatar-rmemory: unsupported architecture"
 #endif
@@ -45,6 +47,10 @@ uint64_t get_current_pc(void)
 #elif defined(TARGET_PPC)
     PowerPCCPU *cpu = POWERPC_CPU(qemu_get_cpu(0));
     return cpu->env.nip;
+
+#elif defined(TARGET_I386)
+    X86CPU *cpu = X86_CPU(qemu_get_cpu(0));
+    return cpu->env.eip;
 
 #else
     error_report("avatar-rmemory: get_current_pc unsupported architecture\n");

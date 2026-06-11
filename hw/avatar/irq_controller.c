@@ -25,6 +25,9 @@
 #elif defined(TARGET_PPC)
 #  include "target/ppc/cpu.h"
 #  include "hw/avatar/halucinator_irq_memory.h"
+#elif defined(TARGET_I386)
+#  include "target/i386/cpu.h"
+#  include "hw/avatar/halucinator_irq_memory.h"
 #else
 # error "halucinator_irq: unsupported architecture"
 #endif
